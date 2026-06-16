@@ -88,8 +88,15 @@ class MapperPipeline(private val config: MapperConfig) {
             } catch (e: EnrichmentException) {
                 when (config.enrichment.find { it.name == e.slot }?.onMissing ?: OnMissing.WARN) {
                     OnMissing.FAIL -> throw e
-                    OnMissing.WARN -> { logger.warn("Skipping record — {}", e.message); skipped++; null }
-                    OnMissing.SKIP -> { skipped++; null }
+                    OnMissing.WARN -> {
+                        logger.warn("Skipping record — {}", e.message)
+                        skipped++
+                        null
+                    }
+                    OnMissing.SKIP -> {
+                        skipped++
+                        null
+                    }
                 }
             }
         }
@@ -111,7 +118,8 @@ class MapperPipeline(private val config: MapperConfig) {
         } else if (skipped > 0) {
             logger.warn(
                 "{}: {} record(s) skipped — file will be retried on the next run",
-                filePath, skipped,
+                filePath,
+                skipped,
             )
         }
 

@@ -2,7 +2,6 @@ package org.radarbase.mapper.source
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 
 class OdmSourceReaderTest {

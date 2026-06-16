@@ -48,8 +48,11 @@ class OdmSourceReader : SourceReader {
                     "StudyEventData" -> {
                         reader.attr("StudyEventOID")?.let { current["StudyEventOID"] = it }
                         val repeatKey = reader.attr("StudyEventRepeatKey")
-                        if (repeatKey != null) current["StudyEventRepeatKey"] = repeatKey
-                        else current.remove("StudyEventRepeatKey")
+                        if (repeatKey != null) {
+                            current["StudyEventRepeatKey"] = repeatKey
+                        } else {
+                            current.remove("StudyEventRepeatKey")
+                        }
                     }
                     "FormData" -> {
                         reader.attr("FormOID")?.let { current["FormOID"] = it }

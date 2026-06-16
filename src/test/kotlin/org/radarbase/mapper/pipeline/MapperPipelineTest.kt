@@ -66,8 +66,8 @@ class MapperPipelineTest {
         assertEquals("2", records[1].fields["SubjectKey"])
 
         // event name from composite lookup (questionnaireName + projectId)
-        assertEquals("month_3_participant_arm_1", records[0].fields["StudyEventOID"])  // Weekly|W6 + RECURRENT-GB
-        assertEquals("week_1_participant_arm_1", records[1].fields["StudyEventOID"])   // Weekly|W1 + RECURRENT-GB
+        assertEquals("month_3_participant_arm_1", records[0].fields["StudyEventOID"])
+        assertEquals("week_1_participant_arm_1", records[1].fields["StudyEventOID"])
 
         // repeat key cleared
         assertFalse(records.any { it.fields.containsKey("StudyEventRepeatKey") })

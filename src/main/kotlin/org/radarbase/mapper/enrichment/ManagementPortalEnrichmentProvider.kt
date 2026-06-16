@@ -1,7 +1,6 @@
 package org.radarbase.mapper.enrichment
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.radarbase.mapper.config.ProviderConfig
 import org.slf4j.LoggerFactory
@@ -86,7 +85,10 @@ class ManagementPortalEnrichmentProvider(
 
         logger.info(
             "Enrichment '{}': loaded {} entries from Management Portal (projects={}, tokenUrl={})",
-            name, table.size, projects, tokenUrl,
+            name,
+            table.size,
+            projects,
+            tokenUrl,
         )
     }
 

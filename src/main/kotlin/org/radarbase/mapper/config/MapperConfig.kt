@@ -152,8 +152,10 @@ data class ProviderConfig(
 enum class OnMissing {
     /** Abort the run immediately. */
     FAIL,
+
     /** Log a warning and skip the record. */
     WARN,
+
     /** Silently skip the record. */
     SKIP,
 }
@@ -176,7 +178,6 @@ data class FilterConfig(
     /** Item OIDs to remove from every record. */
     @JsonProperty("exclude_items") val excludeItems: List<String> = emptyList(),
 )
-
 
 data class DestinationConfig(
     /** Storage backend: `local` (default) or `s3`. */

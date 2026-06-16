@@ -33,7 +33,7 @@ class S3StorageService(config: S3StorageConfig) : StorageService {
     }
 
     override fun listFiles(root: String, suffix: String): List<String> {
-        val prefix = root.trimEnd('/')  + "/"
+        val prefix = root.trimEnd('/') + "/"
         val request = ListObjectsArgs.builder()
             .bucket(bucket)
             .prefix(prefix)
