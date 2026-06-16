@@ -1,23 +1,27 @@
 # radar-mapper
 
-Reads ODM XML files produced by [radar-output-restructure](https://github.com/RADAR-base/radar-output-restructure), enriches subject identifiers and event names, and writes enriched ODM XML ready for downstream import (e.g. REDCap).
+RADAR-base radar-mapper. Reads ODM XML files produced by [radar-output-restructure](https://github.com/RADAR-base/radar-output-restructure), enriches subject identifiers and event names, and writes enriched ODM XML ready for downstream import (e.g. REDCap).
 
-## How it works
+## Pipeline
 
 ```mermaid
 flowchart TD
-    S[(Source\nLocal / S3)] -->|list .xml files| SCAN[Scan files]
-    SCAN --> SKIP{Already\nprocessed?}
-    SKIP -->|yes| DONE[Skip file]
-    SKIP -->|no| READ[Read ODM XML]
-    READ --> RECORDS[Records]
+    S[(Source\nLocal / S3)] -->|StorageService\nlistFiles / newInputStream| READ
 
-    RECORDS --> ENRICH
+    subgraph READ[Read]
+        SR["«interface»\nSourceReader\n---\nreadFile / readStream"]
+        ODM["OdmSourceReader"]
+        SR -.->|impl| ODM
+    end
 
-    subgraph ENRICH[Enrichment slots — applied in order]
-        direction TB
-        E1[slot: record_id\nManagement Portal] --> E2[slot: event_name\nCSV lookup]
-        E2 --> EN[... more slots]
+    READ -->|List&lt;MappedRecord&gt;| ENRICH
+
+    subgraph ENRICH[Enrich — slots applied in order]
+        EP["«interface»\nEnrichmentProvider\n---\nlookup(key): String?"]
+        CSV["CsvEnrichmentProvider"]
+        MP["ManagementPortalEnrichmentProvider"]
+        EP -.->|impl| CSV
+        EP -.->|impl| MP
     end
 
     ENRICH -->|lookup miss| MISS{on_missing}
@@ -25,19 +29,37 @@ flowchart TD
     MISS -->|warn| RETRY[Skip record\nfile not written\nretried next run]
     MISS -->|skip| DROP[Drop record\nfile still written]
 
-    ENRICH -->|all resolved| FILTER[Filter\nstrip excluded items]
-    FILTER --> WRITE[Write enriched ODM XML]
-    WRITE --> D[(Destination\nLocal / S3)]
+    ENRICH -->|all resolved| FILTER
+
+    subgraph FILTER[Filter]
+        FS["«interface»\nFilterStrategy\n---\napply(record): MappedRecord"]
+        RF["RecordFilter"]
+        FS -.->|impl| RF
+    end
+
+    FILTER -->|List&lt;MappedRecord&gt;| WRITE
+
+    subgraph WRITE[Write]
+        RW["«interface»\nRecordWriter\n---\nwrite(records, path)"]
+        ODW["OdmWriter"]
+        RW -.->|impl| ODW
+    end
+
+    WRITE -->|StorageService\nstore| D[(Destination\nLocal / S3)]
+
+    subgraph STORAGE[StorageService]
+        SS["«interface»\nStorageService\n---\nlistFiles / exists\nnewInputStream / store"]
+        LS["LocalStorageService"]
+        S3["S3StorageService"]
+        SS -.->|impl| LS
+        SS -.->|impl| S3
+    end
+
+    STORAGE -.- READ
+    STORAGE -.- WRITE
 ```
 
-For each `.xml` file found under `source.path`:
-
-1. **Read** — parse ODM XML into records
-2. **Enrich** — apply named enrichment slots in order; each slot resolves a lookup key from the record's fields and writes the result back
-3. **Filter** — optionally strip unwanted item OIDs
-4. **Write** — output enriched ODM XML to the same relative path under `destination.path`
-
-Already-processed files are skipped on subsequent runs (idempotent). If any record in a file fails enrichment with `on_missing: warn`, the file is left unwritten so it is retried on the next run.
+`MapperPipeline` orchestrates the run. `StorageService` abstracts local and S3 I/O so all other components work against `MappedRecord` only.
 
 ## Configuration
 
@@ -77,8 +99,6 @@ destination:
 
 ### Enrichment slots
 
-Each slot under `enrichment` has:
-
 | Field | Description |
 |---|---|
 | `name` | Slot identifier; result is stored under this name and can be referenced by later slots |
@@ -86,7 +106,7 @@ Each slot under `enrichment` has:
 | `source_fields` | List of fields joined (tab-separated by default) to form a composite key |
 | `output_field` | Field name to write the result into (defaults to `name`) |
 | `provider` | Where to look up values — `csv` or `management_portal` |
-| `on_missing` | `warn` (default), `skip`, or `fail` — see below |
+| `on_missing` | `warn` (default), `skip`, or `fail` |
 
 ### `on_missing` behaviour
 
@@ -95,31 +115,6 @@ Each slot under `enrichment` has:
 | `warn` | Log a warning and skip the record; file is **not** written so it retries on the next run |
 | `skip` | Silently drop the record; file **is** written so the drop is permanent |
 | `fail` | Abort the run immediately with an exception |
-
-### Providers
-
-**CSV** (`type: csv`, default):
-
-```yaml
-provider:
-  path: /config/lookup.csv
-  key_column: userId          # single key column
-  # key_columns: [col1, col2] # composite key (tab-joined)
-  value_column: recordId
-```
-
-**Management Portal** (`type: management_portal`):
-
-```yaml
-provider:
-  type: management_portal
-  url: https://radar-base.example.com/managementportal
-  # token_url: http://radar-hydra-public:4444/oauth2/token  # Hydra deployments only
-  client_id: radar_mapper
-  client_secret: secret
-  project: MY-PROJECT         # or projects: [A, B]
-  subject_attribute: REDCapRecordId
-```
 
 ### S3 storage
 
@@ -166,11 +161,6 @@ docker build -t radarbase/radar-mapper .
 ## Development
 
 ```bash
-# Run tests
-gradle test
-
-# Check code style
-gradle ktlintCheck
+gradle test        # run tests
+gradle ktlintCheck # check code style
 ```
-
-Tests require no external services — CSV enrichment and a local storage backend are used throughout.
