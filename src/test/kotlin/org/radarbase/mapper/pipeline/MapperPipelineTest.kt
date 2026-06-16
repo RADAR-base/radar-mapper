@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.radarbase.mapper.config.DestinationConfig
 import org.radarbase.mapper.config.EnrichmentConfig
-import org.radarbase.mapper.config.EventNameConfig
 import org.radarbase.mapper.config.MapperConfig
 import org.radarbase.mapper.config.OnMissing
 import org.radarbase.mapper.config.ProviderConfig
@@ -27,9 +26,11 @@ class MapperPipelineTest {
         onMissing: OnMissing = OnMissing.FAIL,
     ) = MapperConfig(
         source = SourceConfig(path = sourcePath),
-        enrichment = mapOf(
-            "record_id" to EnrichmentConfig(
+        enrichment = listOf(
+            EnrichmentConfig(
+                name = "record_id",
                 sourceField = "SubjectKey",
+                outputField = "SubjectKey",
                 provider = ProviderConfig(
                     path = resourcePath("user-lookup.csv"),
                     keyColumn = "userId",
@@ -37,15 +38,17 @@ class MapperPipelineTest {
                 ),
                 onMissing = onMissing,
             ),
-        ),
-        eventName = EventNameConfig(
-            sourceFields = listOf("StudyEventOID", "StudyOID"),
-            provider = ProviderConfig(
-                path = resourcePath("event-lookup.csv"),
-                keyColumns = listOf("questionnaireName", "projectId"),
-                valueColumn = "eventName",
+            EnrichmentConfig(
+                name = "event_name",
+                sourceFields = listOf("StudyEventOID", "StudyOID"),
+                outputField = "StudyEventOID",
+                provider = ProviderConfig(
+                    path = resourcePath("event-lookup.csv"),
+                    keyColumns = listOf("questionnaireName", "projectId"),
+                    valueColumn = "eventName",
+                ),
+                onMissing = onMissing,
             ),
-            onMissing = onMissing,
         ),
         destination = DestinationConfig(path = destPath),
     )
