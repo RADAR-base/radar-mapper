@@ -1,0 +1,88 @@
+# radar-mapper configuration example
+# Copy this file, fill in your values, and pass the path as the first CLI argument
+# or set the MAPPER_CONFIG environment variable.
+
+# ── Source ────────────────────────────────────────────────────────────────────
+# Storage backend for input ODM XML files produced by radar-output-restructure.
+# type: local  — read from the local filesystem (default)
+# type: s3     — read from an S3-compatible object store (MinIO, AWS S3, etc.)
+
+source:
+  type: local
+  path: /data/odm/
+
+# S3 example (uncomment and remove the local block above):
+# source:
+#   type: s3
+#   path: odm/
+#   s3:
+#     endpoint: https://minio.example.com
+#     bucket: radar-output
+#     access_token: KEY
+#     secret_key: SECRET
+
+# ── Enrichment ────────────────────────────────────────────────────────────────
+# Named slots resolved in order. Each slot's result is stored under the slot name
+# and can be referenced in subsequent source_fields lookups.
+#
+# on_missing behaviour:
+#   warn  — log a warning and skip the record; file is NOT written so it retries next run (default)
+#   skip  — silently drop the record; file IS written so dropped records are permanent
+#   fail  — abort the run immediately
+
+enrichment:
+
+  # Resolve userId (SubjectKey) → REDCap record_id via Management Portal subject attribute.
+  - name: record_id
+    source_field: SubjectKey
+    output_field: SubjectKey
+    provider:
+      type: management_portal
+      url: https://radar-base.example.com/managementportal
+      # OAuth2 token URL. Defaults to {url}/oauth/token (Management Portal built-in auth).
+      # For Hydra deployments, set to the Hydra token endpoint:
+      # token_url: http://radar-hydra-public:4444/oauth2/token
+      client_id: radar_mapper
+      client_secret: secret
+      # Single project:
+      project: MY-PROJECT
+      # Multiple projects (takes precedence over 'project'):
+      # projects: [MY-PROJECT, MY-PROJECT-PROXY]
+      subject_attribute: REDCapRecordId
+    on_missing: warn
+
+  # Resolve event name from a composite key. Declared after record_id so it can
+  # reference enriched values from earlier slots if needed.
+  - name: event_name
+    source_fields: [StudyEventOID, StudyOID]
+    output_field: StudyEventOID
+    provider:
+      # type: csv is the default and can be omitted
+      path: /config/event-lookup.csv
+      key_columns: [questionnaireName, projectId]
+      value_column: eventName
+    on_missing: warn
+
+# event-lookup.csv format:
+#   questionnaireName,projectId,eventName
+#   Weekly|W1,MY-PROJECT,week_1_participant_arm_1
+#   Weekly|W6,MY-PROJECT,month_3_participant_arm_1
+
+# ── Destination ───────────────────────────────────────────────────────────────
+# Storage backend for enriched ODM XML output.
+# Files are written to the same relative path as the source, under this root.
+# Already-processed files are skipped on subsequent runs (idempotent).
+
+destination:
+  type: local
+  path: /data/output/
+
+# S3 example:
+# destination:
+#   type: s3
+#   path: enriched/
+#   s3:
+#     endpoint: https://minio.example.com
+#     bucket: radar-mapper-output
+#     access_token: KEY
+#     secret_key: SECRET
