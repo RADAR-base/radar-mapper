@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Transactional">
+    <ClinicalData StudyOID="RECURRENT-GB" MetaDataVersionOID="v1.0.0">
+        <SubjectData SubjectKey="5b3adcb0">
+            <StudyEventData StudyEventOID="Weekly|W6" StudyEventRepeatKey="W6">
+                <FormData FormOID="Weekly">
+                    <ItemGroupData ItemGroupOID="Weekly_IG" IGRepeatKey="1">
+                        <ItemData ItemOID="wqpa_date" Value="2026-03-20"/>
+                        <ItemData ItemOID="wqpa_q29" Value="5"/>
+                        <ItemData ItemOID="wqpa_q30" Value="4"/>
+                        <ItemData ItemOID="wqpa_anchorq" Value="3"/>
+                    </ItemGroupData>
+                </FormData>
+            </StudyEventData>
+        </SubjectData>
+        <SubjectData SubjectKey="9c4bedf1">
+            <StudyEventData StudyEventOID="Weekly|W1" StudyEventRepeatKey="W1">
+                <FormData FormOID="Weekly">
+                    <ItemGroupData ItemGroupOID="Weekly_IG" IGRepeatKey="1">
+                        <ItemData ItemOID="wqpa_date" Value="2026-01-10"/>
+                        <ItemData ItemOID="wqpa_q29" Value="3"/>
+                        <ItemData ItemOID="wqpa_q30" Value="2"/>
+                        <ItemData ItemOID="wqpa_anchorq" Value="1"/>
+                    </ItemGroupData>
+                </FormData>
+            </StudyEventData>
+        </SubjectData>
+    </ClinicalData>
+</ODM>
