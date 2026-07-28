@@ -1,5 +1,6 @@
 package org.radarbase.mapper.source
 
+import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -16,8 +17,13 @@ import kotlin.io.path.name
  * are populated in [MappedRecord.fields]:
  * `StudyOID`, `MetaDataVersionOID`, `SubjectKey`, `StudyEventOID`,
  * `StudyEventRepeatKey` (omitted when absent), `FormOID`, `ItemGroupOID`, `IGRepeatKey`.
+ *
+ * @param excludeValuePrefixes Item values starting with any of these prefixes are
+ *   dropped during parsing to avoid memory pressure from large embedded payloads.
  */
-class OdmSourceReader : SourceReader {
+class OdmSourceReader(
+    private val excludeValuePrefixes: List<String> = listOf("data:"),
+) : SourceReader {
 
     fun readAll(sourcePath: Path): List<MappedRecord> =
         Files.walk(sourcePath)
@@ -29,6 +35,16 @@ class OdmSourceReader : SourceReader {
         path.inputStream().use { readStream(it) }
 
     override fun readStream(input: InputStream): List<MappedRecord> {
+        // Source files from radar-output-restructure may contain multiple concatenated
+        // XML documents. StAX rejects a second <?xml?> declaration, so we strip them
+        // and wrap everything in a synthetic root to produce a single well-formed document.
+        val raw = input.readAllBytes().toString(Charsets.UTF_8)
+        val cleaned = XML_DECL_PATTERN.replace(raw, "")
+        val wrapped = "<_root>$cleaned</_root>"
+        return parseDocument(wrapped.byteInputStream(Charsets.UTF_8))
+    }
+
+    private fun parseDocument(input: InputStream): List<MappedRecord> {
         val records = mutableListOf<MappedRecord>()
         val reader = XML_FACTORY.createXMLStreamReader(input)
 
@@ -63,7 +79,12 @@ class OdmSourceReader : SourceReader {
                         items.clear()
                     }
                     "ItemData" -> reader.attr("ItemOID")?.let { id ->
-                        items += MappedItem(id = id, value = reader.attr("Value").orEmpty())
+                        val value = reader.attr("Value").orEmpty()
+                        if (excludeValuePrefixes.none { value.startsWith(it) }) {
+                            items += MappedItem(id = id, value = value)
+                        } else {
+                            logger.debug("Skipping item '{}': value matches excluded prefix", id)
+                        }
                     }
                 }
                 XMLStreamConstants.END_ELEMENT -> {
@@ -84,6 +105,8 @@ class OdmSourceReader : SourceReader {
         getAttributeValue(null, name)?.takeIf { it.isNotBlank() }
 
     private companion object {
-        val XML_FACTORY: XMLInputFactory = XMLInputFactory.newInstance()
+        private val logger = LoggerFactory.getLogger(OdmSourceReader::class.java)
+        private val XML_FACTORY: XMLInputFactory = XMLInputFactory.newInstance()
+        private val XML_DECL_PATTERN = Regex("""<\?xml\s[^?]*\?>\s*""")
     }
 }

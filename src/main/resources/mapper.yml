@@ -10,6 +10,11 @@
 source:
   type: local
   path: /data/odm/
+  # Item value prefixes to exclude during parsing. Items whose Value starts with any of
+  # these are dropped before entering the pipeline, avoiding memory pressure from large
+  # embedded payloads (e.g. base64-encoded audio/image). Default: ["data:"]
+  # exclude_value_prefixes:
+  #   - "data:"
 
 # S3 example (uncomment and remove the local block above):
 # source:

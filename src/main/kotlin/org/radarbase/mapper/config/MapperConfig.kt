@@ -60,6 +60,14 @@ data class SourceConfig(
     val path: String,
     /** Required when [type] is `s3`. */
     val s3: S3StorageConfig? = null,
+    /**
+     * Item value prefixes to exclude during parsing. Items whose `Value` attribute starts
+     * with any of these prefixes are dropped before they enter the pipeline, avoiding
+     * memory pressure from large embedded payloads (e.g. base64-encoded audio/image).
+     *
+     * Defaults to `["data:"]` which covers all RFC 2397 data URIs.
+     */
+    @JsonProperty("exclude_value_prefixes") val excludeValuePrefixes: List<String> = listOf("data:"),
 )
 
 /** Format of the source files. */

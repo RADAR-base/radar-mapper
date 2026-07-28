@@ -36,7 +36,7 @@ class MapperPipeline(private val config: MapperConfig) {
         else -> error("Unknown source storage type '${config.source.type}'")
     }
 
-    private val sourceReader: SourceReader = OdmSourceReader()
+    private val sourceReader: SourceReader = OdmSourceReader(config.source.excludeValuePrefixes)
 
     private val writer: RecordWriter = OdmWriter()
 
