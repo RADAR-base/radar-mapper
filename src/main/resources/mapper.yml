@@ -68,6 +68,23 @@ enrichment:
 #   Weekly|W1,MY-PROJECT,week_1_participant_arm_1
 #   Weekly|W6,MY-PROJECT,month_3_participant_arm_1
 
+  # Conditional enrichment with add_as_item and match.
+  # add_as_item injects the enriched value as an <ItemData> element.
+  # match restricts the slot to records matching specific field values.
+  #
+  # - name: weekly_score
+  #   source_field: SubjectKey
+  #   output_field: weekly_calculated_score
+  #   add_as_item: true
+  #   match:
+  #     FormOID: Weekly
+  #     StudyOID: MY-PROJECT
+  #   provider:
+  #     path: /config/weekly-scores.csv
+  #     key_column: userId
+  #     value_column: score
+  #   on_missing: warn
+
 # ── Destination ───────────────────────────────────────────────────────────────
 # Storage backend for enriched ODM XML output.
 # Files are written to the same relative path as the source, under this root.

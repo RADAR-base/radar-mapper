@@ -7,6 +7,7 @@ import org.radarbase.mapper.enrichment.EnrichmentProvider
 import org.radarbase.mapper.enrichment.ManagementPortalEnrichmentProvider
 import org.radarbase.mapper.filter.FilterStrategy
 import org.radarbase.mapper.filter.RecordFilter
+import org.radarbase.mapper.source.MappedItem
 import org.radarbase.mapper.source.MappedRecord
 import org.radarbase.mapper.source.OdmSourceReader
 import org.radarbase.mapper.source.SourceReader
@@ -128,10 +129,15 @@ class MapperPipeline(private val config: MapperConfig) {
 
     private fun enrich(record: MappedRecord): MappedRecord {
         val fields = record.fields.toMutableMap()
+        val items = record.items.toMutableList()
 
         // Apply slots in declaration order. Each slot's result is stored under its name so
         // later slots can reference it in their source_fields, then written to output_field.
         for (enrichConfig in config.enrichment) {
+            // Skip slot if match predicates don't match this record.
+            val matchCriteria = enrichConfig.match
+            if (matchCriteria != null && matchCriteria.any { (k, v) -> fields[k] != v }) continue
+
             val slot = enrichConfig.name
             val keyParts = enrichConfig.effectiveSourceFields.map { field ->
                 fields[field]
@@ -143,11 +149,14 @@ class MapperPipeline(private val config: MapperConfig) {
             fields[slot] = value
             val outputField = enrichConfig.outputField
             if (outputField != null) fields[outputField] = value
+            if (enrichConfig.addAsItem) {
+                items += MappedItem(id = outputField ?: slot, value = value)
+            }
         }
 
         fields.remove("StudyEventRepeatKey")
 
-        return record.copy(fields = fields)
+        return record.copy(fields = fields, items = items)
     }
 
     private companion object {

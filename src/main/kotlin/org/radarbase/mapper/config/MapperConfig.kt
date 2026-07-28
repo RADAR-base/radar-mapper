@@ -87,6 +87,16 @@ data class EnrichmentConfig(
      * Defaults to the slot name if not set.
      */
     @JsonProperty("output_field") val outputField: String? = null,
+    /**
+     * When true, the enriched value is injected as an `<ItemData>` element
+     * (a [MappedItem]) rather than only updating a record-level field.
+     */
+    @JsonProperty("add_as_item") val addAsItem: Boolean = false,
+    /**
+     * Optional field-value predicates. When set, this enrichment slot is only
+     * applied to records whose fields match all entries in this map.
+     */
+    val match: Map<String, String>? = null,
 ) {
     val effectiveSourceFields: List<String>
         get() = sourceFields
