@@ -1,0 +1,13 @@
+questionnaireName,projectId,eventName
+Weekly|W1,RECURRENT-GB,week_1_participant_arm_1
+Weekly|W1,RECURRENT-GB-PROXY,week_1_proxy_arm_1
+Weekly|W2,RECURRENT-GB,week_2_participant_arm_1
+Weekly|W2,RECURRENT-GB-PROXY,week_2_proxy_arm_1
+Weekly|W3,RECURRENT-GB,week_3_participant_arm_1
+Weekly|W3,RECURRENT-GB-PROXY,week_3_proxy_arm_1
+Weekly|W6,RECURRENT-GB,month_3_participant_arm_1
+Weekly|W6,RECURRENT-GB-PROXY,month_3_proxy_arm_1
+Weekly|W12,RECURRENT-GB,month_6_participan_arm_1
+Weekly|W12,RECURRENT-GB-PROXY,month_6_proxy_arm_1
+Weekly|W18,RECURRENT-GB,month_9_participan_arm_1
+Weekly|W18,RECURRENT-GB-PROXY,month_9_proxy_arm_1
