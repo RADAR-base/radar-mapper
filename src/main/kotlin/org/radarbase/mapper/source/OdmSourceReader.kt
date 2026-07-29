@@ -26,10 +26,11 @@ class OdmSourceReader(
 ) : SourceReader {
 
     fun readAll(sourcePath: Path): List<MappedRecord> =
-        Files.walk(sourcePath)
-            .filter { it.name.endsWith(".xml") }
-            .toList()
-            .flatMap { readFile(it) }
+        Files.walk(sourcePath).use { stream ->
+            stream.filter { it.name.endsWith(".xml") }
+                .toList()
+                .flatMap { readFile(it) }
+        }
 
     override fun readFile(path: Path): List<MappedRecord> =
         path.inputStream().use { readStream(it) }
@@ -106,7 +107,12 @@ class OdmSourceReader(
 
     private companion object {
         private val logger = LoggerFactory.getLogger(OdmSourceReader::class.java)
-        private val XML_FACTORY: XMLInputFactory = XMLInputFactory.newInstance()
+        private val XML_FACTORY: XMLInputFactory = XMLInputFactory.newInstance().apply {
+            // Harden against XXE: source files come from S3 (external storage),
+            // so a crafted ODM with <!ENTITY> could leak files or enable SSRF.
+            setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
+            setProperty(XMLInputFactory.SUPPORT_DTD, false)
+        }
         private val XML_DECL_PATTERN = Regex("""<\?xml\s[^?]*\?>\s*""")
     }
 }

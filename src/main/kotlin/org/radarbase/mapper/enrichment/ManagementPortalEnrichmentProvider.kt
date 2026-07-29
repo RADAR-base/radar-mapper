@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import org.radarbase.mapper.config.ProviderConfig
 import org.slf4j.LoggerFactory
 import java.net.URI
+import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.time.Duration
 
 /**
  * [EnrichmentProvider] that fetches subject attributes from the RADAR Management Portal.
@@ -69,7 +71,9 @@ class ManagementPortalEnrichmentProvider(
         val projects = config.effectiveProjects
         val subjectAttribute = requireNotNull(config.subjectAttribute) { "Enrichment '$name': 'subject_attribute' is required for management_portal provider" }
 
-        val http = HttpClient.newHttpClient()
+        val http = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(30))
+            .build()
         val jackson = ObjectMapper()
 
         val token = fetchToken(http, jackson, tokenUrl, clientId, clientSecret, config.scope, config.audience)
@@ -105,15 +109,16 @@ class ManagementPortalEnrichmentProvider(
     ): String {
         val body = buildString {
             append("grant_type=client_credentials")
-            append("&client_id=$clientId")
-            append("&client_secret=$clientSecret")
-            if (!scope.isNullOrBlank()) append("&scope=${scope.trim()}")
-            if (!audience.isNullOrBlank()) append("&audience=${audience.trim()}")
+            append("&client_id=${urlEncode(clientId)}")
+            append("&client_secret=${urlEncode(clientSecret)}")
+            if (!scope.isNullOrBlank()) append("&scope=${urlEncode(scope.trim())}")
+            if (!audience.isNullOrBlank()) append("&audience=${urlEncode(audience.trim())}")
         }
 
         val request = HttpRequest.newBuilder()
             .uri(URI.create(tokenUrl))
             .header("Content-Type", "application/x-www-form-urlencoded")
+            .timeout(Duration.ofSeconds(30))
             .POST(HttpRequest.BodyPublishers.ofString(body))
             .build()
 
@@ -136,9 +141,10 @@ class ManagementPortalEnrichmentProvider(
         token: String,
     ): List<SubjectDto> {
         val request = HttpRequest.newBuilder()
-            .uri(URI.create("$baseUrl/api/subjects?projectName=$project&size=${Int.MAX_VALUE}"))
+            .uri(URI.create("$baseUrl/api/subjects?projectName=${urlEncode(project)}&size=${Int.MAX_VALUE}"))
             .header("Authorization", "Bearer $token")
             .header("Accept", "application/json")
+            .timeout(Duration.ofSeconds(60))
             .GET()
             .build()
 
@@ -157,6 +163,9 @@ class ManagementPortalEnrichmentProvider(
     )
 
     private companion object {
-        val logger = LoggerFactory.getLogger(ManagementPortalEnrichmentProvider::class.java)!!
+        private val logger = LoggerFactory.getLogger(ManagementPortalEnrichmentProvider::class.java)
+
+        private fun urlEncode(value: String): String =
+            URLEncoder.encode(value, Charsets.UTF_8)
     }
 }

@@ -56,6 +56,74 @@ class OdmSourceReaderTest {
     }
 
     @Test
+    fun filtersDataUriValues() {
+        val xml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Transactional">
+                <ClinicalData StudyOID="S1" MetaDataVersionOID="v1">
+                    <SubjectData SubjectKey="u1">
+                        <StudyEventData StudyEventOID="Q|W1">
+                            <FormData FormOID="Q">
+                                <ItemGroupData ItemGroupOID="Q_IG" IGRepeatKey="1">
+                                    <ItemData ItemOID="q1" Value="3"/>
+                                    <ItemData ItemOID="audio" Value="data:audio/mpeg;base64,AAAA"/>
+                                    <ItemData ItemOID="q2" Value="5"/>
+                                </ItemGroupData>
+                            </FormData>
+                        </StudyEventData>
+                    </SubjectData>
+                </ClinicalData>
+            </ODM>
+        """.trimIndent().byteInputStream()
+
+        val record = reader.readStream(xml).first()
+        assertEquals(2, record.items.size)
+        assertEquals("q1", record.items[0].id)
+        assertEquals("q2", record.items[1].id)
+    }
+
+    @Test
+    fun parsesConcatenatedXmlDocuments() {
+        val xml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Transactional">
+                <ClinicalData StudyOID="S1" MetaDataVersionOID="v1">
+                    <SubjectData SubjectKey="u1">
+                        <StudyEventData StudyEventOID="Q|W1">
+                            <FormData FormOID="Q">
+                                <ItemGroupData ItemGroupOID="Q_IG" IGRepeatKey="1">
+                                    <ItemData ItemOID="q1" Value="3"/>
+                                </ItemGroupData>
+                            </FormData>
+                        </StudyEventData>
+                    </SubjectData>
+                </ClinicalData>
+            </ODM>
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Transactional">
+                <ClinicalData StudyOID="S2" MetaDataVersionOID="v1">
+                    <SubjectData SubjectKey="u2">
+                        <StudyEventData StudyEventOID="Q|W2">
+                            <FormData FormOID="Q">
+                                <ItemGroupData ItemGroupOID="Q_IG" IGRepeatKey="1">
+                                    <ItemData ItemOID="q1" Value="7"/>
+                                </ItemGroupData>
+                            </FormData>
+                        </StudyEventData>
+                    </SubjectData>
+                </ClinicalData>
+            </ODM>
+        """.trimIndent().byteInputStream()
+
+        val records = reader.readStream(xml)
+        assertEquals(2, records.size)
+        assertEquals("u1", records[0].fields["SubjectKey"])
+        assertEquals("S1", records[0].fields["StudyOID"])
+        assertEquals("u2", records[1].fields["SubjectKey"])
+        assertEquals("S2", records[1].fields["StudyOID"])
+    }
+
+    @Test
     fun omitsStudyEventRepeatKeyWhenAbsent() {
         // second record in sample has StudyEventRepeatKey present; verify missing key = absent field
         val xml = """
